@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Schoolwork Tracker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: linear-gradient(to bottom right, #eef2f3, #8e9eab);
+      backdrop-filter: blur(10px);
+      color: #333;
+      transition: background 0.3s ease;
+    }
+    .dark-mode {
+      background: #1e1e1e;
+      color: #f0f0f0;
+    }
+    h1 {
+      text-align: center;
+    }
+    .tracker {
+      max-width: 600px;
+      margin: auto;
+    }
+    .entry {
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: background 0.3s ease;
+    }
+    .entry input[type="text"] {
+      font-size: 1rem;
+      border: none;
+      background: transparent;
+      border-bottom: 1px solid #ccc;
+      color: inherit;
+    }
+    .entry select, .entry input[type="date"] {
+      font-size: 1rem;
+      padding: 0.2rem;
+    }
+    .entry.done {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: #007BFF;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .toggle-dark {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <button class="toggle-dark" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+  <audio id="notifySound" src="notification.ogg" preload="auto"></audio>
+  <h1>📚 Schoolwork Tracker</h1>
+  <div class="tracker" id="tracker"></div>
+  <div style="text-align:center;">
+    <button onclick="addEntry()">+ Add Assignment</button>
+  </div>
+
+  <script>
+    const tracker = document.getElementById("tracker");
+    const sound = document.getElementById("notifySound");
+
+    let data = JSON.parse(localStorage.getItem("trackerData")) || [];
+
+    function saveData() {
+      localStorage.setItem("trackerData", JSON.stringify(data));
+    }
+
+    function notify(msg) {
+      if (Notification.permission === "granted") {
+        new Notification(msg);
+        sound.play();
+      }
+    }
+
+    function checkNotifications() {
+      const today = new Date();
+      const tomorrow = new Date();
+      tomorrow.setDate(today.getDate() + 1);
+
+      data.forEach(item => {
+        const due = new Date(item.due);
+        if (!item.done) {
+          if (due.toDateString() === today.toDateString() ||
+              due.toDateString() === tomorrow.toDateString()) {
+            notify(`Reminder: '${item.name}' is due soon!`);
+          }
+        }
+      });
+    }
+
+    function render() {
+      tracker.innerHTML = "";
+      data.forEach((item, i) => {
+        const div = document.createElement("div");
+        div.className = "entry" + (item.done ? " done" : "");
+        div.innerHTML = `
+          <input type="text" value="${item.name}" onchange="updateName(${i}, this.value)">
+          <select onchange="updateType(${i}, this.value)">
+            <option ${item.type === "Test" ? "selected" : ""}>Test</option>
+            <option ${item.type === "Quiz" ? "selected" : ""}>Quiz</option>
+            <option ${item.type === "Classwork" ? "selected" : ""}>Classwork</option>
+            <option ${item.type === "Study" ? "selected" : ""}>Study</option>
+            <option ${item.type === "Extra Credit" ? "selected" : ""}>Extra Credit</option>
+          </select>
+          <input type="date" value="${item.due}" onchange="updateDue(${i}, this.value)">
+          <label><input type="checkbox" ${item.done ? "checked" : ""} onchange="toggleDone(${i})"> Done</label>
+        `;
+        tracker.appendChild(div);
+      });
+    }
+
+    function updateName(i, val) {
+      data[i].name = val;
+      saveData();
+    }
+    function updateType(i, val) {
+      data[i].type = val;
+      saveData();
+    }
+    function updateDue(i, val) {
+      data[i].due = val;
+      saveData();
+    }
+    function toggleDone(i) {
+      data[i].done = !data[i].done;
+      saveData();
+      render();
+    }
+
+    function addEntry() {
+      data.push({ name: "New Assignment", type: "Test", due: "", done: false });
+      saveData();
+      render();
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+
+    // Initialize
+    render();
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+    checkNotifications();
+  </script>
+</body>
+</html>
