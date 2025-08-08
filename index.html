@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Schoolwork Tracker</title>
+  <style>
+    :root {
+      --bg: #f0f0f0;
+      --card: #ffffff88;
+      --text: #111;
+      --accent: #4fc3f7;
+    }
+
+    body.dark {
+      --bg: #121212;
+      --card: #222222cc;
+      --text: #f0f0f0;
+      --accent: #81c784;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: var(--bg);
+      background-image: linear-gradient(270deg, #ff9a9e, #fad0c4, #fbc2eb, #a18cd1);
+      background-size: 800% 800%;
+      animation: gradientMove 20s ease infinite;
+      color: var(--text);
+      padding: 2rem;
+    }
+
+    @keyframes gradientMove {
+      0% {background-position: 0% 50%;}
+      50% {background-position: 100% 50%;}
+      100% {background-position: 0% 50%;}
+    }
+
+    .tracker {
+      max-width: 600px;
+      margin: auto;
+      backdrop-filter: blur(12px);
+      background: var(--card);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 0 30px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 0.6rem;
+      margin: 0.3rem 0;
+      border-radius: 0.5rem;
+      border: none;
+      font-size: 1rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 0.7rem;
+      background: var(--accent);
+      border: none;
+      color: white;
+      font-size: 1rem;
+      border-radius: 0.5rem;
+      margin-top: 0.8rem;
+    }
+
+    .assignment {
+      background: var(--card);
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 0.6rem;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+    }
+
+    .assignment.done {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+
+    .assignment .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .assignment input[type="text"] {
+      background: transparent;
+      border: none;
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+
+    .days-left {
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+
+    .toggle {
+      margin-bottom: 1rem;
+      text-align: right;
+    }
+
+    .blue { border-left: 5px solid #4fc3f7; }
+    .red { border-left: 5px solid #ef5350; }
+    .yellow { border-left: 5px solid #fdd835; }
+    .green { border-left: 5px solid #81c784; }
+  </style>
+</head>
+<body>
+  <div class="tracker">
+    <div class="toggle">
+      <button onclick="toggleDarkMode()">🌓 Toggle Dark Mode</button>
+    </div>
+    <h1>📚 Schoolwork Tracker</h1>
+    <input type="text" id="assignmentName" placeholder="Assignment Name">
+    <input type="date" id="dueDate">
+    <select id="type">
+      <option value="Test">Test</option>
+      <option value="Quiz">Quiz</option>
+      <option value="Study">Study</option>
+      <option value="Classwork">Classwork</option>
+      <option value="Extra Credit">Extra Credit</option>
+    </select>
+    <select id="color">
+      <option value="blue">Blue</option>
+      <option value="red">Red</option>
+      <option value="yellow">Yellow</option>
+      <option value="green">Green</option>
+    </select>
+    <button onclick="addAssignment()">Add Assignment</button>
+    <div id="assignmentsList"></div>
+  </div>
+
+  <script>
+    const list = document.getElementById("assignmentsList");
+
+    function loadAssignments() {
+      const saved = localStorage.getItem("assignments");
+      if (saved) {
+        list.innerHTML = saved;
+        attachCheckboxHandlers();
+      }
+      const dark = localStorage.getItem("darkMode");
+      if (dark === "true") document.body.classList.add("dark");
+    }
+
+    function saveAssignments() {
+      localStorage.setItem("assignments", list.innerHTML);
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+    }
+
+    function calculateDaysLeft(dateStr) {
+      const due = new Date(dateStr);
+      const today = new Date();
+      const diff = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+      return diff >= 0 ? `${diff} day(s) left` : `Overdue`;
+    }
+
+    function attachCheckboxHandlers() {
+      document.querySelectorAll(".done-checkbox").forEach(checkbox => {
+        checkbox.onchange = function () {
+          this.closest(".assignment").classList.toggle("done", this.checked);
+          saveAssignments();
+        };
+      });
+    }
+
+    function addAssignment() {
+      const name = document.getElementById("assignmentName").value;
+      const date = document.getElementById("dueDate").value;
+      const type = document.getElementById("type").value;
+      const color = document.getElementById("color").value;
+
+      if (!name || !date) {
+        alert("Please enter both name and due date.");
+        return;
+      }
+
+      const container = document.createElement("div");
+      container.className = `assignment ${color}`;
+      container.innerHTML = `
+        <div class="header">
+          <input type="text" value="${name}" onchange="saveAssignments()" />
+          <div>
+            <input type="checkbox" class="done-checkbox" /> ✅
+          </div>
+        </div>
+        <div class="details">
+          <div><strong>Type:</strong> ${type}</div>
+          <div><strong>Due:</strong> ${new Date(date).toDateString()}</div>
+          <div class="days-left">${calculateDaysLeft(date)}</div>
+        </div>
+      `;
+      list.appendChild(container);
+      attachCheckboxHandlers();
+      saveAssignments();
+
+      // Reset form
+      document.getElementById("assignmentName").value = "";
+      document.getElementById("dueDate").value = "";
+    }
+
+    loadAssignments();
+  </script>
+</body>
+</html>
